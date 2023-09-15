@@ -1,0 +1,23 @@
+""highway" = 'primary' or 
+"highway" =  'primary_link' or 
+"highway" =  'secondary'  or 
+"highway" =  'secondary_link' or 
+"highway" =    'tertiary' or  "highway" =  'tertiary_link' or
+"highway" =  'steps' or 
+"maxspeed"  =  '40 mph' or
+"maxspeed" =  '50 mph' or
+"maxspeed" =  '54' or
+"maxspeed" =  '60 mph' or
+"maxspeed" =  '70 mph' or 
+"maxspeed" =  '[''40 mph'', ''50 mph'']' or 
+"maxspeed" =  '[''40 mph'', ''60 mph'']' or 
+"maxspeed" =  '[''70 mph'', ''60 mph'']' or 
+"maxspeed" =  '30 mph' or
+"maxspeed" =  '[''30 mph'', ''50 mph'']' or 
+"maxspeed" =  '[''30 mph'', ''60 mph'']' or 
+"maxspeed" =  '[''40 mph'', ''30 mph'']' or 
+"maxspeed" =  '[''40 mph'', ''50 mph'']' or 
+"maxspeed" = '[''40 mph'', ''60 mph'']' or 
+"maxspeed" =  '[''70 mph'', ''40 mph'']' or 
+"maxspeed" =  '[''70 mph'', ''50 mph'']' or
+"maxspeed" =  '[''70 mph'', ''60 mph'']' 
