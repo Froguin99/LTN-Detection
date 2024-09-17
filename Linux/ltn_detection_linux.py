@@ -35,6 +35,9 @@ import warnings
 from shapely.errors import ShapelyDeprecationWarning
 
 
+# Global variable for the lock
+lock = None
+
 
 ## Mute warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -56,7 +59,7 @@ ox.config(use_cache=True,
 
 # %%
 # Define the path to your text file
-file_path = '/home/chrisl/output.txt'
+file_path = '/home/chrisl/output_reversed.txt'
 
 # Initialize an empty list to store the lines
 places = []
@@ -992,6 +995,16 @@ def neighbourhood_permeability(place, neighbourhoods, common_nodes_gdf, all_edge
                 continue
 
         distances = [length for paths in all_pairs_shortest_paths.values() for length in paths.values()]
+        
+        if not distances:
+            return {
+                "mean_distance": 0,
+                "median_distance": 0,
+                "min_distance": 0,
+                "max_distance": 0,
+                "distance_range": 0,
+                "total_distance": 0
+            }
 
         mean_distance = statistics.mean(distances)
         median_distance = statistics.median(distances)
@@ -1017,7 +1030,7 @@ def neighbourhood_permeability(place, neighbourhoods, common_nodes_gdf, all_edge
 
         ## get neighbourhood boundary and neighbourhood boundary buffer
         # set crs
-        neighbourhood = neighbourhood.to_crs('27700')
+        neighbourhood = neighbourhood.to_crs('3395')
         # create a buffer neighbourhood
         neighbourhood_buffer = neighbourhood['geometry'].buffer(15)
         # convert back to a geodataframe (for later on)
@@ -1025,18 +1038,29 @@ def neighbourhood_permeability(place, neighbourhoods, common_nodes_gdf, all_edge
         # reset crs
         neighbourhood, neighbourhood_buffer = neighbourhood.to_crs('4326'), neighbourhood_buffer.to_crs('4326')
 
-
         ## get nodes which can be driven to and walked to within area
         neighbourhood_nodes = gpd.clip(common_nodes_gdf, neighbourhood_buffer)
+
+        if neighbourhood_nodes.empty:
+            print(f"No nodes found for neighbourhood {index}. Using default values.")
+            walk_stats = {
+                "mean_distance": 0,
+                "median_distance": 0,
+                "min_distance": 0,
+                "max_distance": 0,
+                "distance_range": 0,
+                "total_distance": 0
+            }
+            drive_stats = walk_stats
+        else:
+            ## calculate neighbourhood distance stats for walking and driving
+            walk_stats = calculate_distance_stats_from_points(neighbourhood_nodes, walk_streets)
+            drive_stats = calculate_distance_stats_from_points(neighbourhood_nodes, drive_streets)
 
         ## get length of total edges within the neighbourhood
         edges_within_neighbourhood = gpd.sjoin(all_edges, neighbourhood, how="inner", op="intersects")
         total_length = edges_within_neighbourhood['length'].sum()
 
-
-        ## calculate neighbourhood distance stats for walking and driving
-        walk_stats = calculate_distance_stats_from_points(neighbourhood_nodes, walk_streets)
-        drive_stats = calculate_distance_stats_from_points(neighbourhood_nodes, drive_streets)
 
 
         ## Add the statistics to the GeoDataFrame
@@ -1225,15 +1249,25 @@ def get_modal_filters(place, neighbourhoods, boundary, all_streets):
 
         """
 
-        # we need to double check the name of "access"
+        # Check if required columns are present, if not add them with default values
+        for col in ['access', 'bicycle', 'bus', 'motor_vehicle']:
+            if col not in streets_gdf.columns:
+                streets_gdf[col] = None
+
         streets_gdf['access_street'] = streets_gdf['access'] if 'access' in streets_gdf.columns else streets_gdf['access_street']
         streets_gdf['bicycle_street'] = streets_gdf['bicycle'] if 'bicycle' in streets_gdf.columns else streets_gdf['bicycle_street']
         streets_gdf['bus'] = streets_gdf['bus_street'] if 'bus_street' in streets_gdf.columns else streets_gdf['bus']
 
-        busgates = streets_gdf[((streets_gdf["bus"] == "yes") & (streets_gdf["access_street"] == "no") & (streets_gdf["bicycle_street"] == "yes")) |
-                            (streets_gdf["bus"] == "yes") & (streets_gdf["motor_vehicle_street"] == "no") & (streets_gdf["bicycle_street"] == "yes")
-                            ]
+        if 'bus' in streets_gdf.columns:
+            busgates = streets_gdf[((streets_gdf["bus"] == "yes") & (streets_gdf["access_street"] == "no") & (streets_gdf["bicycle_street"] == "yes")) |
+                                (streets_gdf["bus"] == "yes") & (streets_gdf["motor_vehicle_street"] == "no") & (streets_gdf["bicycle_street"] == "yes")]
+            # add bus gate tag
+            busgates['filter_type'] = 'bus gate'
+        else:
+            print("Warning: 'bus' column not found in streets_gdf.")
+            busgates = gpd.GeoDataFrame(columns=streets_gdf.columns, crs=streets_gdf.crs)
 
+        return busgates, streets_gdf
         # add bus gate tag
         busgates['filter_type'] = 'bus gate'
 
@@ -1250,20 +1284,27 @@ def get_modal_filters(place, neighbourhoods, boundary, all_streets):
         GeoDataFrame: A GeoDataFrame containing the unrestricted one-way streets for cycling.
         """
 
-        # Find one-way streets where cycling is unrestricted but cars are restricted
-        oneways = streets_gdf[(streets_gdf["oneway"] == True) & (streets_gdf["oneway:bicycle"] == "no")]
+        ## one-way streets also can act as modal filters. lets find where cycling is unrestricted but cars are
+        if 'oneway:bicycle' in streets_gdf.columns:
+            oneways = streets_gdf[(streets_gdf["oneway"] == True) & (streets_gdf["oneway:bicycle"] == "no")]
 
-        # Dissolve the roads with the same name to avoid miscounting the total number of oneways
-        oneways['name'] = oneways['name'].apply(lambda x: ', '.join(map(str, x)) if isinstance(x, list) else str(x))
-        oneways = oneways.dissolve(by='name')
+            # Convert values in the "name" column to strings if they are not already
+            oneways['name'] = oneways['name'].apply(lambda x: ', '.join(map(str, x)) if isinstance(x, list) else str(x))
 
-        # Reset the index
-        oneways = oneways.reset_index()
+            # Perform dissolve 
+            oneways = oneways.dissolve(by='name')
 
-        # Add one-way bike tag
-        oneways['filter_type'] = 'one-way bike'
+            # Reset the index 
+            oneways = oneways.reset_index()
+
+            # add one way tag
+            oneways['filter_type'] = 'one-way bike'
+        else:
+            print("Warning: 'oneway:bicycle' column not found in streets_gdf.")
+            oneways = gpd.GeoDataFrame(columns=streets_gdf.columns, crs=streets_gdf.crs)
 
         return oneways
+
 
 
 
@@ -2034,15 +2075,28 @@ modal_filter_weighting = 0.75
 
 print("Functions loaded")
 
+
+
+error_file_path = '/home/chrisl/error_places.txt'
+
+
+
 for place in places:
     print("Starting", place)
-    neighbourhoods, common_nodes_gdf, all_edges, walk_streets, drive_streets, boundary, all_streets, boundary_roads = define_neighbourhoods(place, return_all = True)
-    permiablity_metrics = neighbourhood_permeability(place, neighbourhoods, common_nodes_gdf, all_edges, walk_streets, drive_streets)
-    modal_filter_metrics, modal_filters = get_modal_filters(place, neighbourhoods, boundary, all_streets)
-    rat_run_metrics, rat_runs, drive_edges_gdf = get_rat_runs(place, neighbourhoods)
-    scored_neighbourhoods = score_neighbourhoods(modal_filter_metrics, permiablity_metrics, rat_run_metrics)
-    maps = create_webmaps(modal_filters, scored_neighbourhoods, rat_runs, boundary_roads, drive_edges_gdf)
-    print("Finished", place)
+    try:
+        neighbourhoods, common_nodes_gdf, all_edges, walk_streets, drive_streets, boundary, all_streets, boundary_roads = define_neighbourhoods(place, return_all = True)
+        permiablity_metrics = neighbourhood_permeability(place, neighbourhoods, common_nodes_gdf, all_edges, walk_streets, drive_streets)
+        modal_filter_metrics, modal_filters = get_modal_filters(place, neighbourhoods, boundary, all_streets)
+        rat_run_metrics, rat_runs, drive_edges_gdf = get_rat_runs(place, neighbourhoods)
+        scored_neighbourhoods = score_neighbourhoods(modal_filter_metrics, permiablity_metrics, rat_run_metrics)
+        maps = create_webmaps(modal_filters, scored_neighbourhoods, rat_runs, boundary_roads, drive_edges_gdf)
+        print("Finished", place)
+    except Exception as e:
+        with open(error_file_path, 'a') as error_file:
+            error_file.write(f"Error with {place}: {e}\n")
+        print(f"Error with {place}: {e}")
+        continue
+
 
 
 
