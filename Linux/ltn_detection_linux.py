@@ -121,19 +121,54 @@ def define_neighbourhoods(place, return_all):
 
 
 
+    
     """
     This code retrieves street nodes and edges for walking and driving from OpenStreetMap within our area boundary, and loads the OS Open Roads network dataset.
 
     Functions:
     - get_street_networks: Retrieves street networks for all, walking, and driving modes within the specified boundary.
+    - boundary_bounding_box: Buffers a bounding box around the boundary and returns it as a GeoDataFrame in EPSG:4326. 
     """
 
-    def get_OSM_street_networks(boundary_buffered):
+
+    def buffer_bounding_box(boundary_gdf, buffer_distance):
         """
-        Retrieves street networks for all, walking, and driving modes within the specified boundary.
+        Buffers a bounding box around the boundary and returns it as a GeoDataFrame in EPSG:4326.
+        
+        Parameters:
+        boundary_gdf (GeoDataFrame): Boundary geometry in EPSG:4326.
+        buffer_distance (float): Buffer distance in meters. Default is 500 meters.
+        
+        Returns:
+        GeoDataFrame: Buffered bounding box in EPSG:4326.
+        """
+        # Create a bounding box from the boundary
+        bbox_4326 = gpd.GeoDataFrame(geometry=[box(*boundary_gdf.total_bounds)], crs=boundary_gdf.crs)
+        
+        # Reproject to Web Mercator for buffering
+        bbox_web_mercator = bbox_4326.to_crs("EPSG:3857")
+        
+        # Buffer in Web Mercator
+        buffered_bounding_box_web_mercator = bbox_web_mercator.buffer(buffer_distance)
+        
+        # Convert back to EPSG:4326
+        buffered_bounding_box_4326 = buffered_bounding_box_web_mercator.to_crs("EPSG:4326")
+        
+        return buffered_bounding_box_4326
+
+    # get bounding box
+    buffered_bounding_box_gdf = buffer_bounding_box(boundary_buffered, buffer_distance=1000)
+
+    
+
+    def get_OSM_street_networks(boundary_buffered, bounding_box):
+        """
+        Retrieves street networks for all, walking, and driving modes within the specified bounding box, 
+        then clips them to the specified boundary.
 
         Parameters:
-        - boundary_buffered: A GeoDataFrame representing the boundary of the area of interest.
+        - boundary_buffered: A GeoDataFrame representing the original boundary of the area of interest.
+        - bounding_box: A GeoDataFrame representing the buffered bounding box around the boundary.
 
         Returns:
         - all_edges: A GeoDataFrame containing the edges (streets) of the entire street network.
@@ -143,16 +178,20 @@ def define_neighbourhoods(place, return_all):
         - drive_edges: A GeoDataFrame containing the edges (streets) of the driving street network.
         - drive_nodes: A GeoDataFrame containing the nodes (intersections) of the driving street network.
         - common_nodes_gdf: A GeoDataFrame containing the common nodes between the driving and walking street networks.
+        - all_streets: The full street graph for all modes.
+        - walk_streets: The full street graph for walking mode.
+        - drive_streets: The full street graph for driving mode.
         """
+        # Ensure both boundary and bounding box are in EPSG:4326 for compatibility with OSM
+        boundary_buffered_4326 = boundary_buffered.to_crs('EPSG:4326')
+        bounding_box_4326 = bounding_box.to_crs('EPSG:4326')
 
-        # Reset boundary_buffered crs for passing to OSM
-        boundary_buffered_4326 = boundary_buffered.to_crs('4326')
+        # Get street networks using the bounding box
+        all_streets = ox.graph_from_polygon(bounding_box_4326.geometry.iloc[0], network_type='all', simplify=False)
+        walk_streets = ox.graph_from_polygon(bounding_box_4326.geometry.iloc[0], network_type='walk', simplify=True)
+        drive_streets = ox.graph_from_polygon(bounding_box_4326.geometry.iloc[0], network_type='drive', simplify=False)
 
-        # Get street networks
-        all_streets = ox.graph_from_polygon(boundary_buffered_4326.geometry.iloc[0], network_type='all', simplify=False)
-        walk_streets = ox.graph_from_polygon(boundary_buffered_4326.geometry.iloc[0], network_type='walk', simplify=True)
-        drive_streets = ox.graph_from_polygon(boundary_buffered_4326.geometry.iloc[0], network_type='drive', simplify=False)
-
+        # Convert graphs to GeoDataFrames
         all_edges = ox.graph_to_gdfs(all_streets, nodes=False, edges=True)
         all_nodes = ox.graph_to_gdfs(all_streets, nodes=True, edges=False)
 
@@ -162,16 +201,28 @@ def define_neighbourhoods(place, return_all):
         drive_edges = ox.graph_to_gdfs(drive_streets, nodes=False, edges=True)
         drive_nodes = ox.graph_to_gdfs(drive_streets, nodes=True, edges=False)
 
-        # Find the common nodes between networks
-        # This ensures that shortest paths between points should always be able to be calculated
-        common_nodes = drive_nodes.merge(walk_nodes, on='osmid', suffixes=('_drive', '_walk'))
+        # Clip street networks to the original boundary
+        all_edges_clipped = all_edges.clip(boundary_buffered_4326)
+        walk_edges_clipped = walk_edges.clip(boundary_buffered_4326)
+        drive_edges_clipped = drive_edges.clip(boundary_buffered_4326)
+
+        # Clip nodes to the original boundary as well
+        all_nodes_clipped = all_nodes.clip(boundary_buffered_4326)
+        walk_nodes_clipped = walk_nodes.clip(boundary_buffered_4326)
+        drive_nodes_clipped = drive_nodes.clip(boundary_buffered_4326)
+
+        # Find the common nodes between the driving and walking networks
+        common_nodes = drive_nodes_clipped.merge(walk_nodes_clipped, on='osmid', suffixes=('_drive', '_walk'))
         common_nodes_gdf = gpd.GeoDataFrame(common_nodes, geometry='geometry_drive')
 
-        return all_edges, all_nodes, walk_edges, walk_nodes, drive_edges, drive_nodes, common_nodes_gdf, all_streets, walk_streets, drive_streets
-
+        return (
+            all_edges_clipped, all_nodes_clipped, walk_edges_clipped, walk_nodes_clipped,
+            drive_edges_clipped, drive_nodes_clipped, common_nodes_gdf,
+            all_streets, walk_streets, drive_streets
+        )
 
     # get street networks
-    all_edges, all_nodes, walk_edges, walk_nodes, drive_edges, drive_nodes, common_nodes_gdf, all_streets, walk_streets, drive_streets = get_OSM_street_networks(boundary_buffered)
+    all_edges, all_nodes, walk_edges, walk_nodes, drive_edges, drive_nodes, common_nodes_gdf, all_streets, walk_streets, drive_streets = get_OSM_street_networks(boundary_buffered, buffered_bounding_box_gdf)
     #os_open_roads = get_OS_roads()  this is now got at the start of the code to avoid re-reading
 
 
