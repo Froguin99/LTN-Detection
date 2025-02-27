@@ -6,7 +6,7 @@
 
 LTN-Detection is an **experimental** project to quantitatively identify plausible Low Traffic Neighbourhoods in the UK using open data.
 
-Low Traffic Neighbourhoods refer to areas in which *filtered pereablity* and *traffic calming* are deployed to *reduce motorised through-traffic* in *residential areas* (definition sourced from [Transport for London](https://madeby.tfl.gov.uk/2020/12/15/low-traffic-neighbourhoods/)). 
+Low Traffic Neighbourhoods refer to areas in which *filtered permeablity* and *traffic calming* are deployed to *reduce motorised through-traffic* in *residential areas* (definition sourced from [Transport for London](https://madeby.tfl.gov.uk/2020/12/15/low-traffic-neighbourhoods/)). 
 
 To see an example output, try [clicking here](https://froguin99.github.io/newcastleLTNexample/)!
 
