@@ -1,9 +1,6 @@
 # LTN-Detection
 
-![text if the image fails to load](auto-generated-path-to-file-when-you-upload-image "Text displayed on hover")
-
-[logo]: auto-generated-path-to-file-when-you-upload-image "Hover me"
-![error text][logo]
+![title](https://github.com/user-attachments/assets/6a3af717-7988-401d-a0a2-94a1a077b9a0)
 
 ## Introduction
 
@@ -17,14 +14,13 @@ To see an example output, try [clicking here](https://froguin99.github.io/newcas
 
 #### Data and tools
 
-Processing is performed in Python, relieing predominalty on [GeoPandas](https://geopandas.org/en/stable/), [OSMnx](https://osmnx.readthedocs.io/en/stable/) and[NetworkX](https://networkx.org/). 
+Processing is performed in Python, relieing predominalty on [GeoPandas](https://geopandas.org/en/stable/), [OSMnx](https://osmnx.readthedocs.io/en/stable/) and [NetworkX](https://networkx.org/). 
 
 Data used in this project is accessed from [OpenStreetMap](https://www.openstreetmap.org/#map=10/51.6547/-4.0883) using OSMnx, [German Aerospace Centre (DLR)](https://geoservice.dlr.de/web/maps/eoc:guf:4326) using API calls and from the [Ordnance Survey](https://www.ordnancesurvey.co.uk/products/os-open-roads) through manual downloading of data. 
 
 | OpenStreetMap | DLR | Ordnance Survey |
-| :------------------- | :----------: | ----------: |
-| Landuse type         | Express      | MongoDB     |
-| Street networks, Public transport routes, Geographic features        | Urban footprint      | Street networks      |
+| :-------------------: | :----------: | :----------: |
+| Landuse type, Street networks, Public transport routes, Geographic features  | Urban footprint      | Street networks      |
 
 > **Note** you will need to download the OS Open Roads dataset manually and place it in the correct folder (link to folder) to run this project. 
 
