@@ -1,15 +1,12 @@
 # LTN-Detection
 
-![text if the image fails to load](auto-generated-path-to-file-when-you-upload-image "Text displayed on hover")
-
-[logo]: auto-generated-path-to-file-when-you-upload-image "Hover me"
-![error text][logo]
+![title](https://github.com/user-attachments/assets/6a3af717-7988-401d-a0a2-94a1a077b9a0)
 
 ## Introduction
 
 LTN-Detection is an **experimental** project to quantitatively identify plausible Low Traffic Neighbourhoods in the UK using open data.
 
-Low Traffic Neighbourhoods refer to areas in which *filtered pereablity* and *traffic calming* are deployed to *reduce motorised through-traffic* in *residential areas* (definition sourced from [Transport for London](https://madeby.tfl.gov.uk/2020/12/15/low-traffic-neighbourhoods/)). 
+Low Traffic Neighbourhoods refer to areas in which *filtered permeablity* and *traffic calming* are deployed to *reduce motorised through-traffic* in *residential areas* (definition sourced from [Transport for London](https://madeby.tfl.gov.uk/2020/12/15/low-traffic-neighbourhoods/)). 
 
 To see an example output, try [clicking here](https://froguin99.github.io/newcastleLTNexample/)!
 
@@ -17,14 +14,13 @@ To see an example output, try [clicking here](https://froguin99.github.io/newcas
 
 #### Data and tools
 
-Processing is performed in Python, relieing predominalty on [GeoPandas](https://geopandas.org/en/stable/), [OSMnx](https://osmnx.readthedocs.io/en/stable/) and[NetworkX](https://networkx.org/). 
+Processing is performed in Python, relieing predominalty on [GeoPandas](https://geopandas.org/en/stable/), [OSMnx](https://osmnx.readthedocs.io/en/stable/) and [NetworkX](https://networkx.org/). 
 
 Data used in this project is accessed from [OpenStreetMap](https://www.openstreetmap.org/#map=10/51.6547/-4.0883) using OSMnx, [German Aerospace Centre (DLR)](https://geoservice.dlr.de/web/maps/eoc:guf:4326) using API calls and from the [Ordnance Survey](https://www.ordnancesurvey.co.uk/products/os-open-roads) through manual downloading of data. 
 
 | OpenStreetMap | DLR | Ordnance Survey |
-| :------------------- | :----------: | ----------: |
-| Landuse type         | Express      | MongoDB     |
-| Street networks, Public transport routes, Geographic features        | Urban footprint      | Street networks      |
+| :-------------------: | :----------: | :----------: |
+| Landuse type, Street networks, Public transport routes, Geographic features  | Urban footprint      | Street networks      |
 
 > **Note** you will need to download the OS Open Roads dataset manually and place it in the correct folder (link to folder) to run this project. 
 
@@ -37,7 +33,7 @@ At a high level, processing is split into 5  sections:
 4. Identify neighbourhood through traffic
 5. Output results as webmaps
 
-Examples of each of these components can be found in the "Examples" folder.
+Examples of each of these components can be found in the `\Examples` folder.
 
 The aim of this processing is to provide a data-driven indication of how plausiablie a given neighbourhood is to be a Low Traffic Neighbourhood. Each neighbourhood is given scores based on modal filtering, neighbourhood permiamblity and through traffic which are combined to provide an overall score. Processing is designed to work at the Local Authority District level, and works best on cities and highly urbanised areas. However it can be applied to much smaller (or larger, depending on how powerful your computer is!) areas. 
 
@@ -54,9 +50,11 @@ As highlighted prior, you will also need to download the [OS Open Roads](https:/
 
 To obtain an output, you must first set the placename(s) in the `\data\placenames.txt` to locations which can be obtained using OSM [nominatim boundary search](https://nominatim.openstreetmap.org/ui/search.html). For example `Newcastle Upon Tyne, United Kingdom` or `London Borough of Lambeth`. Multiple locations should be sepearted with a new line. 
 
-Next, open the file `ltn_scoring_3_12_3_mass_process.ipynb` and replace the variable `file_path = ` with the location of your placenames to be input. Then hit run and let the script do its magic! 
+Next, open the file `ltn_scoring_3_12_3_mass_process.ipynb` and replace the variable `file_path = ` with the location of your placenames to be input. Then hit run and let the script do its magic! This may take a while, as both the permeability and through traffic calculations use variations of shortest path calculations, which can be time consuming depending on your chosen location. 
 
-Example scripts for each component of the processing can be found in the `Examples` folder.
+Parameters can also be modified to either change the [resulting scores or to speed up the processing](https://github.com/Froguin99/LTN-Detection/blob/156227bef5bb486f741fde1a1b5a243dfc6c2871/code/ltn_scoring_3_12_3_mass_process.ipynb#L131). Iterations can be reduced to speed up permeability at the expense of thoroughness, and score weightings can be adjusted if you feel that any weights should be higher than others (default is equal weights).
+
+
 
 ## Further information and Contributing
 
