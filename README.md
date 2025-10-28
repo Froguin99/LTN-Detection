@@ -2,6 +2,8 @@
 
 ![title](https://github.com/user-attachments/assets/6a3af717-7988-401d-a0a2-94a1a077b9a0)
 
+**Paper**: [Journal of Cycling and Micromobilty Research](https://doi.org/10.1016/j.jcmr.2025.100097) or found at doi.org/10.1016/j.jcmr.2025.100097
+
 ## Introduction
 
 LTN-Detection is an **experimental** project to quantitatively identify plausible Low Traffic Neighbourhoods in the UK using open data.
