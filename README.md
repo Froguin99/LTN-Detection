@@ -31,7 +31,7 @@ Data used in this project is accessed from [OpenStreetMap](https://www.openstree
 At a high level, processing is split into 5  sections:
 1. Define neighbourhoods
 2. Identify modal filtering density
-3. Measure neighbourhood permiablity
+3. Measure neighbourhood permeability
 4. Identify neighbourhood through traffic
 5. Output results as webmaps
 
